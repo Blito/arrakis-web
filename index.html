@@ -101,7 +101,26 @@
 
 		if ( websocket != null )
                 {
-                    websocket.send( "{ key:" + String.fromCharCode(char) + " }" );
+                    action_to_send = "NOP";
+                    switch(char) {
+                        case 119:
+                        case 87:
+                        action_to_send = "UP";
+                        break;
+                        case 115:
+                        case 83:
+                        action_to_send = "DOWN";
+                        break;
+                        case 97:
+                        case 65:
+                        action_to_send = "LEFT";
+                        break;
+                        case 100:
+                        case 68:
+                        action_to_send = "RIGHT";
+                        break;
+                    }
+                    websocket.send( "{action:" + action_to_send + "}" );
                     console.log( "Key pressed." );
                 }
 	    }
