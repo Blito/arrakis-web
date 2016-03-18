@@ -1,166 +1,193 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <title>Arrakis Web Client</title>
-    </head>
-    <body>
-        <h1 style="text-align:center">Arrakis Web Client</h1>
-        <p>
-            <button onClick="initWebSocket();">Connect</button>
-	    <input id="serverLocation" value="ws://localhost:9002"/>
-	</p>
-	<p>
-            <button onClick="stopWebSocket();">Disconnect</button>
-            <button onClick="checkSocket();">State</button>
-        </p>
-        <p>
-            <textarea id="debugTextArea" style="width:400px;height:200px;"></textarea>
-        </p>
+<head>
+    <meta charset="utf-8">
+    <title>Arrakis Web Client</title>
+</head>
+<body>
+    <h1 style="text-align:center">Arrakis Web Client</h1>
+    <div style="display:flex;justify-content:space-between; margin:50px;">
+        <div id="left_pane">
+            <p>
+                <button onClick="initWebSocket();">Connect</button>
+                <input id="serverLocation" value="ws://localhost:9002"/>
+            </p>
+            <p>
+                <button onClick="stopWebSocket();">Disconnect</button>
+                <button onClick="checkSocket();">State</button>
+            </p>
+            <p>
+                <textarea id="debugTextArea" style="width:400px;height:200px;"></textarea>
+            </p>
+        </div>
+        <div id="right_pane">
+            <canvas id="myCanvas" width="700" height="500" style="border:1px solid #000000;">
+            </canvas>
+        </div>
+    </div>
 
-        <script type="text/javascript">
-            var debugTextArea = document.getElementById("debugTextArea");
-            function debug(message) {
-                debugTextArea.value += message + "\n";
-                debugTextArea.scrollTop = debugTextArea.scrollHeight;
-            }
+    <script type="text/javascript">
+    var debugTextArea = document.getElementById("debugTextArea");
+    function debug(message) {
+        debugTextArea.value += message + "\n";
+        debugTextArea.scrollTop = debugTextArea.scrollHeight;
+    }
 
-            function sendMessage() {
-                var msg = document.getElementById("inputText").value;
-                if ( websocket != null )
-                {
-                    document.getElementById("inputText").value = "";
-                    websocket.send( msg );
-                    console.log( "string sent :", '"'+msg+'"' );
+    function sendMessage() {
+        var msg = document.getElementById("inputText").value;
+        if ( websocket != null )
+        {
+            document.getElementById("inputText").value = "";
+            websocket.send( msg );
+            console.log( "string sent :", '"'+msg+'"' );
+        }
+    }
+
+    var websocket = null;
+
+    function initWebSocket() {
+        try {
+            if (typeof MozWebSocket == 'function')
+            WebSocket = MozWebSocket;
+            if ( websocket && websocket.readyState == 1 )
+            websocket.close();
+            websocket = new WebSocket( document.getElementById("serverLocation").value );
+            websocket.onopen = function (evt) {
+                debug("CONNECTED");
+                var msg = JSON.stringify({"new-client":"InputClient"}); debug(msg);
+                websocket.send(msg);
+                msg = JSON.stringify({"new-client":"OutputClient"}); debug(msg);
+                websocket.send(msg);
+            };
+            websocket.onclose = function (evt) {
+                debug("DISCONNECTED");
+            };
+            websocket.onmessage = function (evt) {
+                //console.log( "Message received :", evt.data );
+                debug( evt.data );
+                var data = JSON.parse(evt.data);
+                drawCircle(data.position_x, data.position_y);
+            };
+            websocket.onerror = function (evt) {
+                debug('ERROR: ' + evt.data);
+            };
+        } catch (exception) {
+            debug('ERROR: ' + exception);
+        }
+    }
+
+    function stopWebSocket() {
+        if (websocket)
+        websocket.close();
+    }
+
+    function checkSocket() {
+        if (websocket != null) {
+            var stateStr;
+            switch (websocket.readyState) {
+                case 0: {
+                    stateStr = "CONNECTING";
+                    break;
+                }
+                case 1: {
+                    stateStr = "OPEN";
+                    break;
+                }
+                case 2: {
+                    stateStr = "CLOSING";
+                    break;
+                }
+                case 3: {
+                    stateStr = "CLOSED";
+                    break;
+                }
+                default: {
+                    stateStr = "UNKNOW";
+                    break;
                 }
             }
+            debug("WebSocket state = " + websocket.readyState + " ( " + stateStr + " )");
+        } else {
+            debug("WebSocket is null");
+        }
+    }
 
-            var websocket = null;
+    document.onkeydown = function(event) {
+        var char = event.which || event.keyCode;
 
-            function initWebSocket() {
-                try {
-                    if (typeof MozWebSocket == 'function')
-                        WebSocket = MozWebSocket;
-                    if ( websocket && websocket.readyState == 1 )
-                        websocket.close();
-                    websocket = new WebSocket( document.getElementById("serverLocation").value );
-                    websocket.onopen = function (evt) {
-                        debug("CONNECTED");
-                        websocket.send(JSON.stringify({"new-client":"InputClient"}));
-                        websocket.send(JSON.stringify({"new-client":"OutputClient"}));
-                    };
-                    websocket.onclose = function (evt) {
-                        debug("DISCONNECTED");
-                    };
-                    websocket.onmessage = function (evt) {
-                        console.log( "Message received :", evt.data );
-                        debug( evt.data );
-                    };
-                    websocket.onerror = function (evt) {
-                        debug('ERROR: ' + evt.data);
-                    };
-                } catch (exception) {
-                    debug('ERROR: ' + exception);
-                }
+        if ( websocket != null )
+        {
+            var action_to_send;
+            switch(char) {
+                case 119:
+                case 87:
+                action_to_send = "UP";
+                break;
+                case 115:
+                case 83:
+                action_to_send = "DOWN";
+                break;
+                case 97:
+                case 65:
+                action_to_send = "LEFT";
+                break;
+                case 100:
+                case 68:
+                action_to_send = "RIGHT";
+                break;
             }
-
-            function stopWebSocket() {
-                if (websocket)
-                    websocket.close();
+            if (action_to_send !== undefined) {
+                websocket.send(JSON.stringify({action:action_to_send}));
             }
+            console.log( "Key pressed." );
+        }
+    }
 
-            function checkSocket() {
-                if (websocket != null) {
-                    var stateStr;
-                    switch (websocket.readyState) {
-                        case 0: {
-                            stateStr = "CONNECTING";
-                            break;
-                        }
-                        case 1: {
-                            stateStr = "OPEN";
-                            break;
-                        }
-                        case 2: {
-                            stateStr = "CLOSING";
-                            break;
-                        }
-                        case 3: {
-                            stateStr = "CLOSED";
-                            break;
-                        }
-                        default: {
-                            stateStr = "UNKNOW";
-                            break;
-                        }
-                    }
-                    debug("WebSocket state = " + websocket.readyState + " ( " + stateStr + " )");
-                } else {
-                    debug("WebSocket is null");
-                }
+    document.onkeyup = function(event) {
+        var char = event.which || event.keyCode;
+
+        if ( websocket != null )
+        {
+            var action_to_send;
+            switch(char) {
+                case 119:
+                case 87:
+                action_to_send = "UP";
+                break;
+                case 115:
+                case 83:
+                action_to_send = "DOWN";
+                break;
+                case 97:
+                case 65:
+                action_to_send = "LEFT";
+                break;
+                case 100:
+                case 68:
+                action_to_send = "RIGHT";
+                break;
             }
+            if (action_to_send !== undefined) {
+                websocket.send(JSON.stringify({"action-stopped":action_to_send}));
+            }
+            console.log( "Key pressed." );
+        }
+    }
 
-	    document.onkeydown = function(event) {
-		var char = event.which || event.keyCode;
+    function drawCircle(x, y) {
+        //get a reference to the canvas
+        var canvas = document.getElementById("myCanvas");
+        var ctx = canvas.getContext("2d");
 
-		if ( websocket != null )
-                {
-                    var action_to_send;
-                    switch(char) {
-                        case 119:
-                        case 87:
-                        action_to_send = "UP";
-                        break;
-                        case 115:
-                        case 83:
-                        action_to_send = "DOWN";
-                        break;
-                        case 97:
-                        case 65:
-                        action_to_send = "LEFT";
-                        break;
-                        case 100:
-                        case 68:
-                        action_to_send = "RIGHT";
-                        break;
-                    }
-                    if (action_to_send !== undefined) {
-                        websocket.send(JSON.stringify({action:action_to_send}));
-                    }
-                    console.log( "Key pressed." );
-                }
-	    }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            document.onkeyup = function(event) {
-		var char = event.which || event.keyCode;
+        //draw a circle
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI*2, true);
+        ctx.closePath();
+        ctx.fill();
+    }
 
-		if ( websocket != null )
-                {
-                    var action_to_send;
-                    switch(char) {
-                        case 119:
-                        case 87:
-                        action_to_send = "UP";
-                        break;
-                        case 115:
-                        case 83:
-                        action_to_send = "DOWN";
-                        break;
-                        case 97:
-                        case 65:
-                        action_to_send = "LEFT";
-                        break;
-                        case 100:
-                        case 68:
-                        action_to_send = "RIGHT";
-                        break;
-                    }
-                    if (action_to_send !== undefined) {
-                        websocket.send(JSON.stringify({"action-stopped":action_to_send}));
-                    }
-                    console.log( "Key pressed." );
-                }
-	    }
-        </script>
-    </body>
+    </script>
+</body>
 </html>
