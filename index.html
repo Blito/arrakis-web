@@ -64,9 +64,13 @@
             };
             websocket.onmessage = function (evt) {
                 //console.log( "Message received :", evt.data );
-                debug( evt.data );
-                var data = JSON.parse(evt.data);
-                drawCircle(data.position_x, data.position_y);
+                debug( '// ' + evt.data );
+
+                clearCanvas();
+                var data = JSON.parse(evt.data).to_render;
+                data.forEach(function(item) {
+                    drawCircle(item.x, item.y);
+                });
             };
             websocket.onerror = function (evt) {
                 debug('ERROR: ' + evt.data);
@@ -174,12 +178,18 @@
         }
     }
 
-    function drawCircle(x, y) {
+    function clearCanvas() {
         //get a reference to the canvas
         var canvas = document.getElementById("myCanvas");
         var ctx = canvas.getContext("2d");
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawCircle(x, y) {
+        //get a reference to the canvas
+        var canvas = document.getElementById("myCanvas");
+        var ctx = canvas.getContext("2d");
 
         //draw a circle
         ctx.beginPath();
