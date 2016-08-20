@@ -17,7 +17,7 @@
                 <button onClick="checkSocket();">State</button>
             </p>
             <p>
-                <textarea id="debugTextArea" style="width:400px;height:200px;"></textarea>
+                <textarea id="debugTextArea" style="width:700px;height:200px;"></textarea>
             </p>
         </div>
         <div id="right_pane">
@@ -47,6 +47,15 @@
 
     var websocket = null;
 
+    var is_pause_on = false;
+
+    var status_to_color = {
+        "IDLE" : "red",
+        "WALKING" : "blue",
+        "AIRBORN" : "green",
+        "DUCKING" : "black"
+    };
+
     function initWebSocket() {
         try {
             if (typeof MozWebSocket == 'function')
@@ -69,9 +78,16 @@
                 debug( '// ' + evt.data );
 
                 clearCanvas();
-                var data = JSON.parse(evt.data).to_render;
-                data.forEach(function(item) {
-                    drawCircle(item.x, item.y);
+
+                drawScene();
+
+                var frame = JSON.parse(evt.data);
+                frame.players.forEach(function(player) {
+                    drawPlayer(player);
+                });
+
+                frame.arrows.forEach(function(arrow) {
+                    drawArrow(arrow);
                 });
             };
             websocket.onerror = function (evt) {
@@ -108,7 +124,7 @@
                     break;
                 }
                 default: {
-                    stateStr = "UNKNOW";
+                    stateStr = "UNKNOWN";
                     break;
                 }
             }
@@ -125,28 +141,40 @@
         {
             var action_to_send;
             switch(char) {
-                case 32:  // spacebar
-                action_to_send = "JUMP";
-                break;
-                case 119: // W
                 case 87:  // w
                 action_to_send = "UP";
                 break;
-                case 115: // S
                 case 83:  // s
                 action_to_send = "DOWN";
                 break;
-                case 97:  // A
                 case 65:  // a
                 action_to_send = "LEFT";
                 break;
-                case 100: // D
                 case 68:  // d
                 action_to_send = "RIGHT";
+                break;
+                case 74:  // j
+                action_to_send = "AIM";
+                break;
+                case 75:  // k
+                action_to_send = "JUMP";
+                break;
+                case 76:  // l
+                action_to_send = "DASH";
                 break;
             }
             if (action_to_send !== undefined) {
                 websocket.send(JSON.stringify({action:action_to_send}));
+            }
+            if (char == 80 || char == 112) { // P
+                action_to_send = "PAUSE";
+                if (is_pause_on) {
+                    websocket.send(JSON.stringify({"action-stopped":action_to_send}));
+                    is_pause_on = false;
+                } else {
+                    websocket.send(JSON.stringify({action:action_to_send}));
+                    is_pause_on = true;
+                }
             }
         }
     }
@@ -158,24 +186,26 @@
         {
             var action_to_send;
             switch(char) {
-                case 32:  // spacebar
-                action_to_send = "JUMP";
-                break;
-                case 119: // W
                 case 87:  // w
                 action_to_send = "UP";
                 break;
-                case 115: // S
                 case 83:  // s
                 action_to_send = "DOWN";
                 break;
-                case 97:  // A
                 case 65:  // a
                 action_to_send = "LEFT";
                 break;
-                case 100: // D
                 case 68:  // d
                 action_to_send = "RIGHT";
+                break;
+                case 74:  // j
+                action_to_send = "AIM";
+                break;
+                case 75:  // k
+                action_to_send = "JUMP";
+                break;
+                case 76:  // l
+                action_to_send = "DASH";
                 break;
             }
             if (action_to_send !== undefined) {
@@ -193,6 +223,24 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
+    function drawScene() {
+        // floor
+        drawRect(0,30,500,30);
+
+        // left wall
+        drawRect(0,90,20,60);
+    }
+
+    function drawRect(left_coord, top_coord, width, height) {
+        //get a reference to the canvas
+        var canvas = document.getElementById("myCanvas");
+        var ctx = canvas.getContext("2d");
+
+        ctx.rect(left_coord,canvas.height-top_coord,width,height);
+        ctx.fillStyle = 'black';
+        ctx.fill();
+    }
+
     function drawCircle(x, y) {
         //get a reference to the canvas
         var canvas = document.getElementById("myCanvas");
@@ -200,8 +248,35 @@
 
         //draw a circle
         ctx.beginPath();
-        ctx.arc(x, y, 10, 0, Math.PI*2, true);
+        ctx.arc(x, canvas.height - y, 10, 0, Math.PI*2, true);
         ctx.closePath();
+        ctx.fillStyle = 'red';
+        ctx.fill();
+    }
+
+    function drawPlayer(player) {
+        //get a reference to the canvas
+        var canvas = document.getElementById("myCanvas");
+        var ctx = canvas.getContext("2d");
+
+        //draw a circle
+        ctx.beginPath();
+        ctx.arc(player.x, canvas.height - player.y, 10, 0, Math.PI*2, true);
+        ctx.closePath();
+        ctx.fillStyle = status_to_color[player.status];
+        ctx.fill();
+    }
+
+    function drawArrow(arrow) {
+        //get a reference to the canvas
+        var canvas = document.getElementById("myCanvas");
+        var ctx = canvas.getContext("2d");
+
+        //draw a circle
+        ctx.beginPath();
+        ctx.arc(arrow.x, canvas.height - arrow.y, 4, 0, Math.PI*2, true);
+        ctx.closePath();
+        ctx.fillStyle = 'HotPink';
         ctx.fill();
     }
 
