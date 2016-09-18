@@ -3,11 +3,14 @@
 <head>
     <meta charset="utf-8">
     <title>Arrakis Web Client</title>
+    <style src="css/arrakis.css"></style>
+    <link rel="stylesheet" href="css/arrakis.css" media="screen" title="no title" charset="utf-8">
+    <script type="text/javascript" src="js/two.js" defer></script>
 </head>
-<body onresize=arrakis.resizeCanvas()>
-    <h1 style="text-align:center">Arrakis Web Client</h1>
-    <div style="display:flex;justify-content:space-between; margin:50px;">
-        <div id="left_pane">
+<body onresize="arrakis.resizeCanvas();" onload="arrakis.resizeCanvas();">
+    <div class="container">
+        <div id="leftPane" class="left">
+            <h1>Arrakis</h1>
             <p>
                 <button onClick="arrakis.initWebSocket();">Connect</button>
                 <input id="serverLocation" value="ws://localhost:9002"/>
@@ -16,13 +19,10 @@
                 <button onClick="arrakis.stopWebSocket();">Disconnect</button>
                 <button onClick="arrakis.checkSocket();">State</button>
             </p>
-            <p>
-                <textarea id="debugTextArea" style="width:700px;height:200px;"></textarea>
-            </p>
+            <textarea id="debugTextArea" class="debug-text-area"></textarea>
         </div>
-        <div id="right_pane">
-            <canvas id="myCanvas" width="700" height="500" style="border:1px solid #000000;">
-            </canvas>
+        <div id="rightPane" class="game">
+            <canvas id="myCanvas" width="700" height="500" style="border:1px solid #000000;"></canvas>
         </div>
     </div>
 

@@ -5,6 +5,9 @@ var arrakis = {
 websocket: null,
 is_pause_on: false,
 debugTextArea: document.getElementById("debugTextArea"),
+canvas: document.getElementById("myCanvas"),
+ctx: document.getElementById("myCanvas").getContext("2d"),
+rightPane: document.getElementById("rightPane"),
 
 status_to_color: {
     "IDLE" : "red",
@@ -19,7 +22,13 @@ debug: function debug(message) {
 },
 
 resizeCanvas: function resizeCanvas() {
+    this.canvas.height = window.innerHeight - 16;
+    this.canvas.width = this.canvas.height * 4 / 3;
 
+    this.rightPane.style.height = this.canvas.height + "px";
+    this.rightPane.style.width = this.canvas.width + "px";
+
+    this.debug("RESIZING");
 },
 
 sendMessage: function sendMessage() {
@@ -112,7 +121,7 @@ checkSocket: function checkSocket() {
                 break;
             }
         }
-        this.debug("WebSocket state = " + websocket.readyState + " ( " + stateStr + " )");
+        this.debug("WebSocket state = " + this.websocket.readyState + " ( " + stateStr + " )");
     } else {
         this.debug("WebSocket is null");
     }
@@ -201,10 +210,7 @@ onKeyUp: function onKeyUp(event) {
 
 clearCanvas: function clearCanvas() {
     //get a reference to the canvas
-    var canvas = document.getElementById("myCanvas");
-    var ctx = canvas.getContext("2d");
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 },
 
 drawScene: function drawScene() {
@@ -216,65 +222,45 @@ drawScene: function drawScene() {
 },
 
 drawRect: function drawRect(left_coord, top_coord, width, height) {
-    //get a reference to the canvas
-    var canvas = document.getElementById("myCanvas");
-    var ctx = canvas.getContext("2d");
-
-    ctx.rect(left_coord,canvas.height-top_coord,width,height);
-    ctx.fillStyle = 'black';
-    ctx.fill();
+    this.ctx.rect(left_coord,this.canvas.height-top_coord,width,height);
+    this.ctx.fillStyle = 'black';
+    this.ctx.fill();
 },
 
 drawCircle: function drawCircle(x, y) {
-    //get a reference to the canvas
-    var canvas = document.getElementById("myCanvas");
-    var ctx = canvas.getContext("2d");
-
     //draw a circle
-    ctx.beginPath();
-    ctx.arc(x, canvas.height - y, 10, 0, Math.PI*2, true);
-    ctx.closePath();
-    ctx.fillStyle = 'red';
-    ctx.fill();
+    this.ctx.beginPath();
+    this.ctx.arc(x, this.canvas.height - y, 10, 0, Math.PI*2, true);
+    this.ctx.closePath();
+    this.ctx.fillStyle = 'red';
+    this.ctx.fill();
 },
 
 drawPlayer: function drawPlayer(player) {
-    //get a reference to the canvas
-    var canvas = document.getElementById("myCanvas");
-    var ctx = canvas.getContext("2d");
-
     //draw a circle
-    ctx.beginPath();
-    ctx.arc(player.x, canvas.height - player.y, 10, 0, Math.PI*2, true);
-    ctx.closePath();
-    ctx.fillStyle = this.status_to_color[player.status];
-    ctx.fill();
+    this.ctx.beginPath();
+    this.ctx.arc(player.x, this.canvas.height - player.y, 10, 0, Math.PI*2, true);
+    this.ctx.closePath();
+    this.ctx.fillStyle = this.status_to_color[player.status];
+    this.ctx.fill();
 },
 
 drawArrow: function drawArrow(arrow) {
-    //get a reference to the canvas
-    var canvas = document.getElementById("myCanvas");
-    var ctx = canvas.getContext("2d");
-
     //draw a circle
-    ctx.beginPath();
-    ctx.arc(arrow.x, canvas.height - arrow.y, 4, 0, Math.PI*2, true);
-    ctx.closePath();
-    ctx.fillStyle = 'HotPink';
-    ctx.fill();
+    this.ctx.beginPath();
+    this.ctx.arc(arrow.x, this.canvas.height - arrow.y, 4, 0, Math.PI*2, true);
+    this.ctx.closePath();
+    this.ctx.fillStyle = 'HotPink';
+    this.ctx.fill();
 },
 
 drawPowerUp: function drawPowerUp(powerup) {
-    //get a reference to the canvas
-    var canvas = document.getElementById("myCanvas");
-    var ctx = canvas.getContext("2d");
-
     //draw a circle
-    ctx.beginPath();
-    ctx.arc(powerup.x, canvas.height - powerup.y, 10, 0, Math.PI*2, true);
-    ctx.closePath();
-    ctx.fillStyle = 'DarkGoldenRod';
-    ctx.fill();
+    this.ctx.beginPath();
+    this.ctx.arc(powerup.x, this.canvas.height - powerup.y, 10, 0, Math.PI*2, true);
+    this.ctx.closePath();
+    this.ctx.fillStyle = 'DarkGoldenRod';
+    this.ctx.fill();
 }
 
 }; // end arrakis
