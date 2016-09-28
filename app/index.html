@@ -5,14 +5,33 @@
     <title>Arrakis Web Client</title>
     <style src="css/arrakis.css"></style>
     <link rel="stylesheet" href="css/arrakis.css" media="screen" title="no title" charset="utf-8">
-    <script type="text/javascript" src="js/two.js" defer></script>
+    <script src="libs/polyfill.js"></script>
+    <script src="libs/system.js"></script>
+    <script>
+    // set our baseURL reference path
+    System.config({
+        packages: {
+            js: {
+                format: 'register',
+                defaultExtension: 'js'
+            },
+        },
+        meta: {
+            // our modules have been transpiled to commonJS
+            'js/*': {format: 'cjs'}
+        }
+    });
+
+     System.import('js/arrakis.js')
+                 .then(null, console.error.bind(console));
+    </script>
 </head>
 <body onresize="arrakis.resizeCanvas();" onload="arrakis.resizeCanvas();">
     <div class="container">
         <div id="leftPane" class="left">
             <h1>Arrakis</h1>
             <p>
-                <button onClick="arrakis.initWebSocket();">Connect</button>
+                <button onClick="arrakis.initWebSocket(document.getElementById('serverLocation').value);">Connect</button>
                 <input id="serverLocation" value="ws://localhost:9002"/>
             </p>
             <p>

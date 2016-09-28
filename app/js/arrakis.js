@@ -31,17 +31,9 @@ resizeCanvas: function resizeCanvas() {
     this.debug("RESIZING");
 },
 
-sendMessage: function sendMessage() {
-    var msg = document.getElementById("inputText").value;
-    if ( this.websocket != null )
-    {
-        document.getElementById("inputText").value = "";
-        this.websocket.send( msg );
-        console.log( "string sent :", '"'+msg+'"' );
-    }
-},
+// NETWORKING
 
-initWebSocket: function initWebSocket() {
+initWebSocket: function initWebSocket(serverLocation) {
     try {
         if (typeof MozWebSocket == 'function') {
             WebSocket = MozWebSocket;
@@ -49,7 +41,7 @@ initWebSocket: function initWebSocket() {
         if ( this.websocket && this.websocket.readyState == 1 ) {
             this.websocket.close();
         }
-        this.websocket = new WebSocket( document.getElementById("serverLocation").value );
+        this.websocket = new WebSocket( serverLocation );
         var self = this;
         this.websocket.onopen = function (evt) {
             self.debug("CONNECTED");
@@ -57,6 +49,9 @@ initWebSocket: function initWebSocket() {
             self.websocket.send(msg);
             msg = JSON.stringify({"new-client":"OutputClient"}); self.debug(msg);
             self.websocket.send(msg);
+
+            document.onkeyup = arrakis.onKeyUp.bind(self);
+            document.onkeydown = arrakis.onKeyDown.bind(self);
         };
         this.websocket.onclose = function (evt) {
             self.debug("DISCONNECTED");
@@ -129,7 +124,7 @@ checkSocket: function checkSocket() {
 
 onKeyDown: function onKeyDown(event) {
     var char = event.which || event.keyCode;
-
+    console.log("Key Down");
     if ( this.websocket != null )
     {
         var action_to_send;
@@ -213,6 +208,12 @@ clearCanvas: function clearCanvas() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 },
 
+// DRAWING
+
+initTwoJS: function initTwoJS() {
+
+},
+
 drawScene: function drawScene() {
     // floor
     this.drawRect(0,30,500,30);
@@ -264,6 +265,3 @@ drawPowerUp: function drawPowerUp(powerup) {
 }
 
 }; // end arrakis
-
-document.onkeyup = arrakis.onKeyUp.bind(arrakis);
-document.onkeydown = arrakis.onKeyDown.bind(arrakis);

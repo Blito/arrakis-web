@@ -1,0 +1,30 @@
+{
+  "name": "arrakis-web",
+  "version": "1.0.0",
+  "description": "Web Client for Arrakis server game.",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://Blito@github.com/Blito/arrakis-web.git"
+  },
+  "author": "Blito",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Blito/arrakis-web/issues"
+  },
+  "homepage": "https://github.com/Blito/arrakis-web#readme",
+  "devDependencies": {
+    "babel-preset-es2015": "^6.14.0",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-print": "^2.0.1",
+    "gulp-webserver": "^0.9.1"
+  },
+  "dependencies": {
+    "babel-polyfill": "^6.13.0",
+    "systemjs": "^0.19.38"
+  }
+}
