@@ -19,7 +19,8 @@ gulp.task('watch', function(){
 gulp.task('libs', function(){
     return gulp.src([
         'node_modules/systemjs/dist/system.js',
-        'node_modules/babel-polyfill/dist/polyfill.js'])
+        'node_modules/babel-polyfill/dist/polyfill.js',
+        'app/js/two.js'])
         .pipe(print())
         .pipe(gulp.dest('build/libs'));
 });

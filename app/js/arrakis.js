@@ -4,8 +4,8 @@ export default class Arrakis {
         this.websocket = null;
         this.is_pause_on = false;
         this.debugTextArea = document.getElementById("debugTextArea");
-        this.canvas = document.getElementById("myCanvas");
-        this.ctx = document.getElementById("myCanvas").getContext("2d");
+        //this.canvas = document.getElementById("myCanvas");
+        //this.ctx = document.getElementById("myCanvas").getContext("2d");
         this.rightPane = document.getElementById("rightPane");
 
         this.status_to_color = {
@@ -14,6 +14,11 @@ export default class Arrakis {
             "AIRBORN" : "green",
             "DUCKING" : "black"
         };
+
+        this.twoJS = null;
+        this.initTwoJS();
+
+        this.players = {};
     }
 
     debug(message) {
@@ -22,11 +27,11 @@ export default class Arrakis {
     }
 
     resizeCanvas() {
-        this.canvas.height = window.innerHeight - 16;
+        /*this.canvas.height = window.innerHeight - 16;
         this.canvas.width = this.canvas.height * 4 / 3;
 
         this.rightPane.style.height = this.canvas.height + "px";
-        this.rightPane.style.width = this.canvas.width + "px";
+        this.rightPane.style.width = this.canvas.width + "px";*/
 
         this.debug("RESIZING");
     }
@@ -50,8 +55,9 @@ export default class Arrakis {
                 msg = JSON.stringify({"new-client":"OutputClient"}); self.debug(msg);
                 self.websocket.send(msg);
 
-                document.onkeyup = arrakis.onKeyUp.bind(self);
-                document.onkeydown = arrakis.onKeyDown.bind(self);
+                // This was moved to index.js, since I couldn't fix it fast
+                //document.onkeyup = arrakis.onKeyUp.bind(self);
+                //document.onkeydown = arrakis.onKeyDown.bind(self);
             };
             this.websocket.onclose = function (evt) {
                 self.debug("DISCONNECTED");
@@ -60,9 +66,9 @@ export default class Arrakis {
                 //console.log( "Message received :", evt.data );
                 self.debug( '// ' + evt.data );
 
-                self.clearCanvas();
+                //self.clearCanvas();
 
-                self.drawScene();
+                //self.drawScene();
 
                 var frame = JSON.parse(evt.data);
                 frame.players.forEach(function(player) {
@@ -70,12 +76,13 @@ export default class Arrakis {
                 });
 
                 frame.arrows.forEach(function(arrow) {
-                    self.drawArrow(arrow);
+                    //self.drawArrow(arrow);
                 });
 
                 frame.powerups.forEach(function(powerup) {
-                    self.drawPowerUp(powerup);
+                    //self.drawPowerUp(powerup);
                 });
+
             };
             this.websocket.onerror = function (evt) {
                 self.debug('ERROR: ' + evt.data);
@@ -205,13 +212,19 @@ export default class Arrakis {
 
     clearCanvas() {
         //get a reference to the canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        //this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
 // DRAWING
 
     initTwoJS() {
-
+        var params = {
+          height: window.innerHeight - 16,
+          weight: (window.innerHeight - 16) * 4 / 3,
+          type: Two.Types.canvas,
+          autostart: true };
+        this.twoJS = new Two(params).appendTo(this.rightPane);
+        console.log(this.twoJS);
     }
 
     drawScene() {
@@ -228,22 +241,27 @@ export default class Arrakis {
         this.ctx.fill();
     }
 
-    drawCircle(x, y) {
-        //draw a circle
-        this.ctx.beginPath();
-        this.ctx.arc(x, this.canvas.height - y, 10, 0, Math.PI*2, true);
-        this.ctx.closePath();
-        this.ctx.fillStyle = 'red';
-        this.ctx.fill();
-    }
-
     drawPlayer(player) {
         //draw a circle
-        this.ctx.beginPath();
-        this.ctx.arc(player.x, this.canvas.height - player.y, 10, 0, Math.PI*2, true);
-        this.ctx.closePath();
-        this.ctx.fillStyle = this.status_to_color[player.status];
-        this.ctx.fill();
+        console.log(player);
+
+        // new player
+        if (this.players['id'+player.id] == undefined) {
+          this.players['id'+player.id] = player;
+
+          var circle = this.twoJS.makeCircle(player.x, player.y, 15);
+          circle.fill = '#FF8000';
+          circle.stroke = 'orangered'; // Accepts all valid css color
+          circle.linewidth = 5;
+
+          this.players['id'+player.id]['actor'] = circle;
+        }
+        // existing player
+        else {
+          this.players['id'+player.id]['actor'].translation.set(player.x, player.y);
+        }
+
+        this.twoJS.update();
     }
 
     drawArrow(arrow) {
