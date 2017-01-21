@@ -1,267 +1,267 @@
-"use strict";
+export default class Arrakis {
 
-var arrakis = {
+    constructor() {
+        this.websocket = null;
+        this.is_pause_on = false;
+        this.debugTextArea = document.getElementById("debugTextArea");
+        this.canvas = document.getElementById("myCanvas");
+        this.ctx = document.getElementById("myCanvas").getContext("2d");
+        this.rightPane = document.getElementById("rightPane");
 
-websocket: null,
-is_pause_on: false,
-debugTextArea: document.getElementById("debugTextArea"),
-canvas: document.getElementById("myCanvas"),
-ctx: document.getElementById("myCanvas").getContext("2d"),
-rightPane: document.getElementById("rightPane"),
+        this.status_to_color = {
+            "IDLE" : "red",
+            "WALKING" : "blue",
+            "AIRBORN" : "green",
+            "DUCKING" : "black"
+        };
+    }
 
-status_to_color: {
-    "IDLE" : "red",
-    "WALKING" : "blue",
-    "AIRBORN" : "green",
-    "DUCKING" : "black"
-},
+    debug(message) {
+        this.debugTextArea.value += message + "\n";
+        this.debugTextArea.scrollTop = this.debugTextArea.scrollHeight;
+    }
 
-debug: function debug(message) {
-    this.debugTextArea.value += message + "\n";
-    this.debugTextArea.scrollTop = this.debugTextArea.scrollHeight;
-},
+    resizeCanvas() {
+        this.canvas.height = window.innerHeight - 16;
+        this.canvas.width = this.canvas.height * 4 / 3;
 
-resizeCanvas: function resizeCanvas() {
-    this.canvas.height = window.innerHeight - 16;
-    this.canvas.width = this.canvas.height * 4 / 3;
+        this.rightPane.style.height = this.canvas.height + "px";
+        this.rightPane.style.width = this.canvas.width + "px";
 
-    this.rightPane.style.height = this.canvas.height + "px";
-    this.rightPane.style.width = this.canvas.width + "px";
-
-    this.debug("RESIZING");
-},
+        this.debug("RESIZING");
+    }
 
 // NETWORKING
 
-initWebSocket: function initWebSocket(serverLocation) {
-    try {
-        if (typeof MozWebSocket == 'function') {
-            WebSocket = MozWebSocket;
+    initWebSocket(serverLocation) {
+        try {
+            if (typeof MozWebSocket == 'function') {
+                WebSocket = MozWebSocket;
+            }
+            if ( this.websocket && this.websocket.readyState == 1 ) {
+                this.websocket.close();
+            }
+            this.websocket = new WebSocket( serverLocation );
+            var self = this;
+            this.websocket.onopen = function (evt) {
+                self.debug("CONNECTED");
+                var msg = JSON.stringify({"new-client":"InputClient"}); self.debug(msg);
+                self.websocket.send(msg);
+                msg = JSON.stringify({"new-client":"OutputClient"}); self.debug(msg);
+                self.websocket.send(msg);
+
+                document.onkeyup = arrakis.onKeyUp.bind(self);
+                document.onkeydown = arrakis.onKeyDown.bind(self);
+            };
+            this.websocket.onclose = function (evt) {
+                self.debug("DISCONNECTED");
+            };
+            this.websocket.onmessage = function (evt) {
+                //console.log( "Message received :", evt.data );
+                self.debug( '// ' + evt.data );
+
+                self.clearCanvas();
+
+                self.drawScene();
+
+                var frame = JSON.parse(evt.data);
+                frame.players.forEach(function(player) {
+                    self.drawPlayer(player);
+                });
+
+                frame.arrows.forEach(function(arrow) {
+                    self.drawArrow(arrow);
+                });
+
+                frame.powerups.forEach(function(powerup) {
+                    self.drawPowerUp(powerup);
+                });
+            };
+            this.websocket.onerror = function (evt) {
+                self.debug('ERROR: ' + evt.data);
+            };
+        } catch (exception) {
+            this.debug('ERROR: ' + exception);
         }
-        if ( this.websocket && this.websocket.readyState == 1 ) {
+    }
+
+    stopWebSocket() {
+        if (this.websocket) {
             this.websocket.close();
         }
-        this.websocket = new WebSocket( serverLocation );
-        var self = this;
-        this.websocket.onopen = function (evt) {
-            self.debug("CONNECTED");
-            var msg = JSON.stringify({"new-client":"InputClient"}); self.debug(msg);
-            self.websocket.send(msg);
-            msg = JSON.stringify({"new-client":"OutputClient"}); self.debug(msg);
-            self.websocket.send(msg);
-
-            document.onkeyup = arrakis.onKeyUp.bind(self);
-            document.onkeydown = arrakis.onKeyDown.bind(self);
-        };
-        this.websocket.onclose = function (evt) {
-            self.debug("DISCONNECTED");
-        };
-        this.websocket.onmessage = function (evt) {
-            //console.log( "Message received :", evt.data );
-            self.debug( '// ' + evt.data );
-
-            self.clearCanvas();
-
-            self.drawScene();
-
-            var frame = JSON.parse(evt.data);
-            frame.players.forEach(function(player) {
-                self.drawPlayer(player);
-            });
-
-            frame.arrows.forEach(function(arrow) {
-                self.drawArrow(arrow);
-            });
-
-            frame.powerups.forEach(function(powerup) {
-                self.drawPowerUp(powerup);
-            });
-        };
-        this.websocket.onerror = function (evt) {
-            self.debug('ERROR: ' + evt.data);
-        };
-    } catch (exception) {
-        this.debug('ERROR: ' + exception);
     }
-},
 
-stopWebSocket: function stopWebSocket() {
-    if (this.websocket) {
-        this.websocket.close();
+    checkSocket() {
+        if (this.websocket != null) {
+            var stateStr;
+            switch (websocket.readyState) {
+                case 0: {
+                    stateStr = "CONNECTING";
+                    break;
+                }
+                case 1: {
+                    stateStr = "OPEN";
+                    break;
+                }
+                case 2: {
+                    stateStr = "CLOSING";
+                    break;
+                }
+                case 3: {
+                    stateStr = "CLOSED";
+                    break;
+                }
+                default: {
+                    stateStr = "UNKNOWN";
+                    break;
+                }
+            }
+            this.debug("WebSocket state = " + this.websocket.readyState + " ( " + stateStr + " )");
+        } else {
+            this.debug("WebSocket is null");
+        }
     }
-},
 
-checkSocket: function checkSocket() {
-    if (this.websocket != null) {
-        var stateStr;
-        switch (websocket.readyState) {
-            case 0: {
-                stateStr = "CONNECTING";
+    onKeyDown(event) {
+        var char = event.which || event.keyCode;
+        console.log("Key Down");
+        if ( this.websocket != null )
+        {
+            var action_to_send;
+            switch(char) {
+                case 87:  // w
+                action_to_send = "UP";
+                break;
+                case 83:  // s
+                action_to_send = "DOWN";
+                break;
+                case 65:  // a
+                action_to_send = "LEFT";
+                break;
+                case 68:  // d
+                action_to_send = "RIGHT";
+                break;
+                case 74:  // j
+                action_to_send = "AIM";
+                break;
+                case 75:  // k
+                action_to_send = "JUMP";
+                break;
+                case 76:  // l
+                action_to_send = "DASH";
                 break;
             }
-            case 1: {
-                stateStr = "OPEN";
-                break;
-            }
-            case 2: {
-                stateStr = "CLOSING";
-                break;
-            }
-            case 3: {
-                stateStr = "CLOSED";
-                break;
-            }
-            default: {
-                stateStr = "UNKNOWN";
-                break;
-            }
-        }
-        this.debug("WebSocket state = " + this.websocket.readyState + " ( " + stateStr + " )");
-    } else {
-        this.debug("WebSocket is null");
-    }
-},
-
-onKeyDown: function onKeyDown(event) {
-    var char = event.which || event.keyCode;
-    console.log("Key Down");
-    if ( this.websocket != null )
-    {
-        var action_to_send;
-        switch(char) {
-            case 87:  // w
-            action_to_send = "UP";
-            break;
-            case 83:  // s
-            action_to_send = "DOWN";
-            break;
-            case 65:  // a
-            action_to_send = "LEFT";
-            break;
-            case 68:  // d
-            action_to_send = "RIGHT";
-            break;
-            case 74:  // j
-            action_to_send = "AIM";
-            break;
-            case 75:  // k
-            action_to_send = "JUMP";
-            break;
-            case 76:  // l
-            action_to_send = "DASH";
-            break;
-        }
-        if (action_to_send !== undefined) {
-            this.websocket.send(JSON.stringify({action:action_to_send}));
-        }
-        if (char == 80 || char == 112) { // P
-            action_to_send = "PAUSE";
-            if (this.is_pause_on) {
-                this.websocket.send(JSON.stringify({"action-stopped":action_to_send}));
-                this.is_pause_on = false;
-            } else {
+            if (action_to_send !== undefined) {
                 this.websocket.send(JSON.stringify({action:action_to_send}));
-                this.is_pause_on = true;
+            }
+            if (char == 80 || char == 112) { // P
+                action_to_send = "PAUSE";
+                if (this.is_pause_on) {
+                    this.websocket.send(JSON.stringify({"action-stopped":action_to_send}));
+                    this.is_pause_on = false;
+                } else {
+                    this.websocket.send(JSON.stringify({action:action_to_send}));
+                    this.is_pause_on = true;
+                }
             }
         }
     }
-},
 
-onKeyUp: function onKeyUp(event) {
-    var char = event.which || event.keyCode;
+    onKeyUp(event) {
+        var char = event.which || event.keyCode;
 
-    if ( this.websocket != null )
-    {
-        var action_to_send;
-        switch(char) {
-            case 87:  // w
-            action_to_send = "UP";
-            break;
-            case 83:  // s
-            action_to_send = "DOWN";
-            break;
-            case 65:  // a
-            action_to_send = "LEFT";
-            break;
-            case 68:  // d
-            action_to_send = "RIGHT";
-            break;
-            case 74:  // j
-            action_to_send = "AIM";
-            break;
-            case 75:  // k
-            action_to_send = "JUMP";
-            break;
-            case 76:  // l
-            action_to_send = "DASH";
-            break;
+        if ( this.websocket != null )
+        {
+            var action_to_send;
+            switch(char) {
+                case 87:  // w
+                action_to_send = "UP";
+                break;
+                case 83:  // s
+                action_to_send = "DOWN";
+                break;
+                case 65:  // a
+                action_to_send = "LEFT";
+                break;
+                case 68:  // d
+                action_to_send = "RIGHT";
+                break;
+                case 74:  // j
+                action_to_send = "AIM";
+                break;
+                case 75:  // k
+                action_to_send = "JUMP";
+                break;
+                case 76:  // l
+                action_to_send = "DASH";
+                break;
+            }
+            if (action_to_send !== undefined) {
+                this.websocket.send(JSON.stringify({"action-stopped":action_to_send}));
+            }
+            console.log( "Key pressed.");
         }
-        if (action_to_send !== undefined) {
-            this.websocket.send(JSON.stringify({"action-stopped":action_to_send}));
-        }
-        console.log( "Key pressed.");
     }
-},
 
-clearCanvas: function clearCanvas() {
-    //get a reference to the canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-},
+    clearCanvas() {
+        //get a reference to the canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
 
 // DRAWING
 
-initTwoJS: function initTwoJS() {
+    initTwoJS() {
 
-},
+    }
 
-drawScene: function drawScene() {
-    // floor
-    this.drawRect(0,30,500,30);
+    drawScene() {
+        // floor
+        this.drawRect(0,30,500,30);
 
-    // left wall
-    this.drawRect(0,90,20,60);
-},
+        // left wall
+        this.drawRect(0,90,20,60);
+    }
 
-drawRect: function drawRect(left_coord, top_coord, width, height) {
-    this.ctx.rect(left_coord,this.canvas.height-top_coord,width,height);
-    this.ctx.fillStyle = 'black';
-    this.ctx.fill();
-},
+    drawRect(left_coord, top_coord, width, height) {
+        this.ctx.rect(left_coord,this.canvas.height-top_coord,width,height);
+        this.ctx.fillStyle = 'black';
+        this.ctx.fill();
+    }
 
-drawCircle: function drawCircle(x, y) {
-    //draw a circle
-    this.ctx.beginPath();
-    this.ctx.arc(x, this.canvas.height - y, 10, 0, Math.PI*2, true);
-    this.ctx.closePath();
-    this.ctx.fillStyle = 'red';
-    this.ctx.fill();
-},
+    drawCircle(x, y) {
+        //draw a circle
+        this.ctx.beginPath();
+        this.ctx.arc(x, this.canvas.height - y, 10, 0, Math.PI*2, true);
+        this.ctx.closePath();
+        this.ctx.fillStyle = 'red';
+        this.ctx.fill();
+    }
 
-drawPlayer: function drawPlayer(player) {
-    //draw a circle
-    this.ctx.beginPath();
-    this.ctx.arc(player.x, this.canvas.height - player.y, 10, 0, Math.PI*2, true);
-    this.ctx.closePath();
-    this.ctx.fillStyle = this.status_to_color[player.status];
-    this.ctx.fill();
-},
+    drawPlayer(player) {
+        //draw a circle
+        this.ctx.beginPath();
+        this.ctx.arc(player.x, this.canvas.height - player.y, 10, 0, Math.PI*2, true);
+        this.ctx.closePath();
+        this.ctx.fillStyle = this.status_to_color[player.status];
+        this.ctx.fill();
+    }
 
-drawArrow: function drawArrow(arrow) {
-    //draw a circle
-    this.ctx.beginPath();
-    this.ctx.arc(arrow.x, this.canvas.height - arrow.y, 4, 0, Math.PI*2, true);
-    this.ctx.closePath();
-    this.ctx.fillStyle = 'HotPink';
-    this.ctx.fill();
-},
+    drawArrow(arrow) {
+        //draw a circle
+        this.ctx.beginPath();
+        this.ctx.arc(arrow.x, this.canvas.height - arrow.y, 4, 0, Math.PI*2, true);
+        this.ctx.closePath();
+        this.ctx.fillStyle = 'HotPink';
+        this.ctx.fill();
+    }
 
-drawPowerUp: function drawPowerUp(powerup) {
-    //draw a circle
-    this.ctx.beginPath();
-    this.ctx.arc(powerup.x, this.canvas.height - powerup.y, 10, 0, Math.PI*2, true);
-    this.ctx.closePath();
-    this.ctx.fillStyle = 'DarkGoldenRod';
-    this.ctx.fill();
-}
+    drawPowerUp(powerup) {
+        //draw a circle
+        this.ctx.beginPath();
+        this.ctx.arc(powerup.x, this.canvas.height - powerup.y, 10, 0, Math.PI*2, true);
+        this.ctx.closePath();
+        this.ctx.fillStyle = 'DarkGoldenRod';
+        this.ctx.fill();
+    }
 
-}; // end arrakis
+} // end arrakis

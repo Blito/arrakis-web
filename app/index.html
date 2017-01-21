@@ -22,21 +22,21 @@
         }
     });
 
-     System.import('js/arrakis.js')
-                 .then(null, console.error.bind(console));
+    System.import('js/index.js');
+
     </script>
 </head>
-<body onresize="arrakis.resizeCanvas();" onload="arrakis.resizeCanvas();">
+<body>
     <div class="container">
         <div id="leftPane" class="left">
             <h1>Arrakis</h1>
             <p>
-                <button onClick="arrakis.initWebSocket(document.getElementById('serverLocation').value);">Connect</button>
+                <button id="connectButton">Connect</button>
                 <input id="serverLocation" value="ws://localhost:9002"/>
             </p>
             <p>
-                <button onClick="arrakis.stopWebSocket();">Disconnect</button>
-                <button onClick="arrakis.checkSocket();">State</button>
+                <button id="disconnectButton">Disconnect</button>
+                <button id="stateButton">State</button>
             </p>
             <textarea id="debugTextArea" class="debug-text-area"></textarea>
         </div>
@@ -44,8 +44,6 @@
             <canvas id="myCanvas" width="700" height="500" style="border:1px solid #000000;"></canvas>
         </div>
     </div>
-
-    <script type="text/javascript" src="js/arrakis.js"></script>
 
 </body>
 </html>
