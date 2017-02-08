@@ -1,6 +1,7 @@
 export default class Arrakis {
 
     constructor() {
+        /* member declaration */
         this.websocket = null;
         this.is_pause_on = false;
         this.debugTextArea = document.getElementById("debugTextArea");
@@ -16,9 +17,15 @@ export default class Arrakis {
         };
 
         this.twoJS = null;
-        this.initTwoJS();
+        this.rendering_cycle_id = true;
 
+        // these contain the objects being rendered
         this.players = {};
+        this.arrows = {};
+        this.powerups = {};
+
+        /* constructor */
+        this.initTwoJS();
     }
 
     debug(message) {
@@ -70,19 +77,76 @@ export default class Arrakis {
 
                 //self.drawScene();
 
+                // TODO: Get rendering out of onMessage!!
                 var frame = JSON.parse(evt.data);
+
                 frame.players.forEach(function(player) {
-                    self.drawPlayer(player);
+                    if (self.players['id'+player.id] == undefined) {
+                        self.createPlayer(player);
+                    } else {
+                        self.drawPlayer(player);
+                    }
+                    self.markAsRendered(self.players['id'+player.id]);
                 });
+                // iterate over all stored players and delete the ones that haven't been rendered this frame (because they were deleted)
+                for (var key in self.players) {
+                    // skip loop if the property is from prototype
+                    if (!self.players.hasOwnProperty(key)) continue;
 
+                    if (!self.hasBeenRendered(self.players[key])) {
+                        self.twoJS.remove(self.players[key].actor);
+                        delete self.players[key];
+                    }
+                }
+
+                // TODO: This behavior should be isolated in a single place, players, arrows and powerups work in the same way.
+            // RENDER ARROWS
+                // iterate over all incoming arrows and mark the stored ones as rendered
                 frame.arrows.forEach(function(arrow) {
-                    //self.drawArrow(arrow);
+                    if (self.arrows['id'+arrow.id] == undefined) {
+                        self.createArrow(arrow);
+                    } else {
+                        self.drawArrow(arrow);
+                    }
+                    self.markAsRendered(self.arrows['id'+arrow.id]);
                 });
+                // iterate over all stored arrows and delete the ones that haven't been rendered this frame (because they were deleted)
+                for (var key in self.arrows) {
+                    // skip loop if the property is from prototype
+                    if (!self.arrows.hasOwnProperty(key)) continue;
 
+                    console.log(self.arrows[key]);
+
+                    if (!self.hasBeenRendered(self.arrows[key])) {
+                        self.twoJS.remove(self.arrows[key].actor);
+                        delete self.arrows[key];
+                    }
+                }
+
+            // RENDER POWERUPS
                 frame.powerups.forEach(function(powerup) {
-                    //self.drawPowerUp(powerup);
+                    if (self.powerups['id'+powerup.id] == undefined) {
+                        self.createPowerUp(powerup);
+                    } else {
+                        self.drawPowerUp(powerup);
+                    }
+                    self.markAsRendered(self.powerups['id'+powerup.id]);
                 });
+                // iterate over all stored arrows and delete the ones that haven't been rendered this frame (because they were deleted)
+                for (var key in self.powerups) {
+                    // skip loop if the property is from prototype
+                    if (!self.powerups.hasOwnProperty(key)) continue;
 
+                    console.log(self.powerups[key]);
+
+                    if (!self.hasBeenRendered(self.powerups[key])) {
+                        self.twoJS.remove(self.powerups[key].actor);
+                        delete self.powerups[key];
+                    }
+                }
+
+                self.rendering_cycle_id = !self.rendering_cycle_id;
+                self.twoJS.update();
             };
             this.websocket.onerror = function (evt) {
                 self.debug('ERROR: ' + evt.data);
@@ -227,6 +291,14 @@ export default class Arrakis {
         console.log(this.twoJS);
     }
 
+    markAsRendered(obj) {
+        obj['rendered'] = this.rendering_cycle_id;
+    }
+
+    hasBeenRendered(obj) {
+        return obj['rendered'] === this.rendering_cycle_id;
+    }
+
     drawScene() {
         // floor
         this.drawRect(0,30,500,30);
@@ -241,45 +313,97 @@ export default class Arrakis {
         this.ctx.fill();
     }
 
-    drawPlayer(player) {
-        //draw a circle
-        console.log(player);
+// DRAWING : PLAYER
+    createPlayer(player) {
+        var playerHeight = 20.0;
+        var playerWidth = 20.0;
 
-        // new player
+        // new player, add it to hash
         if (this.players['id'+player.id] == undefined) {
-          this.players['id'+player.id] = player;
+            this.players['id'+player.id] = player;
 
-          var circle = this.twoJS.makeCircle(player.x, player.y, 15);
-          circle.fill = '#FF8000';
-          circle.stroke = 'orangered'; // Accepts all valid css color
-          circle.linewidth = 5;
+            var path = this.twoJS.makePath(player.x, player.y,
+                                           player.x + playerWidth/2.0, player.y + playerHeight/2.0,
+                                           player.x, player.y + playerHeight,
+                                           player.x - playerWidth/2.0, player.y + playerHeight/2.0, false);
+            console.log(path);
+            path.fill = '#FF8000';
+            path.stroke = 'orangered'; // Accepts all valid css color
+            path.linewidth = 5;
 
-          this.players['id'+player.id]['actor'] = circle;
+            this.players['id'+player.id]['actor'] = path;
         }
-        // existing player
-        else {
-          this.players['id'+player.id]['actor'].translation.set(player.x, player.y);
-        }
+    }
 
-        this.twoJS.update();
+    drawPlayer(player) {
+
+        var playerHeight = 20.0;
+        var playerWidth = 20.0;
+
+        var stored_player = this.players['id' + player.id];
+        var dx = player.x - stored_player.x;
+        var dy = parseFloat(player.y) - stored_player.y;
+
+        var path = stored_player['actor'];
+
+        // head
+        path._vertices[0]._x = player.x;
+        path._vertices[0]._y = this.twoJS.height - player.y - 30.0 - playerHeight - 2.0 * dy;
+
+        // left
+        if (dy > 0.0) dy *= 3.0;
+        var hand_height = this.twoJS.height - player.y - 30.0 - playerHeight * 0.5 - 2.0 * dy;
+        path._vertices[1]._x = player.x + playerWidth * 0.5;
+        path._vertices[1]._y = hand_height;
+
+        // right
+        path._vertices[3]._x = player.x - playerWidth * 0.5;
+        path._vertices[3]._y = hand_height;
+
+        // feet
+        path._vertices[2]._x = player.x;
+        path._vertices[2]._y = this.twoJS.height - player.y - 30.0;
+
+        this.players['id' + player.id].x = player.x;
+        this.players['id' + player.id].y = player.y;
+    }
+
+// DRAWING : ARROW
+    createArrow(arrow) {
+        var arrowRadius = 5.0;
+
+        this.arrows['id'+arrow.id] = arrow;
+
+        var circle = this.twoJS.makeCircle(arrow.x, arrow.y, arrowRadius);
+        console.log(arrow);
+        //console.log(circle);
+        circle.fill = 'rgba(0, 200, 255, 0.75)';
+        circle.stroke = '#1C75BC';
+        circle.linewidth = 2;
+
+        this.arrows['id'+arrow.id]['actor'] = circle;
     }
 
     drawArrow(arrow) {
-        //draw a circle
-        this.ctx.beginPath();
-        this.ctx.arc(arrow.x, this.canvas.height - arrow.y, 4, 0, Math.PI*2, true);
-        this.ctx.closePath();
-        this.ctx.fillStyle = 'HotPink';
-        this.ctx.fill();
+        this.arrows['id'+arrow.id]['actor'].translation.set(arrow.x, this.twoJS.height - arrow.y);
+    }
+
+// DRAWING : POWERUP
+    createPowerUp(powerup) {
+        var polygonSize = 5.0;
+
+        this.powerups['id'+powerup.id] = powerup;
+
+        var triangle = this.twoJS.makePolygon(powerup.x, this.twoJS.height - powerup.y, polygonSize);
+        triangle.fill = 'rgba(0, 200, 255, 0.75)';
+        triangle.stroke = '#1C75BC';
+        triangle.linewidth = 2;
+
+        this.powerups['id'+powerup.id]['actor'] = triangle;
     }
 
     drawPowerUp(powerup) {
-        //draw a circle
-        this.ctx.beginPath();
-        this.ctx.arc(powerup.x, this.canvas.height - powerup.y, 10, 0, Math.PI*2, true);
-        this.ctx.closePath();
-        this.ctx.fillStyle = 'DarkGoldenRod';
-        this.ctx.fill();
+        this.powerups['id'+powerup.id]['actor'].rotation += 0.01;
     }
 
 } // end arrakis
